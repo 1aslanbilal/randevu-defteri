@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Randevu Defteri">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2563eb">
+<title>Randevu Defteri</title>
+<link rel="apple-touch-icon" id="touchicon" href="">
+<link rel="icon" id="favicon" href="">
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#14171c;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;--accent-text:#fff;
+--free:#dcfce7;--free-text:#166534;--busy:#dbeafe;--busy-text:#1e3a8a;--ok:#16a34a;--bad:#dc2626;--mola:#e5e7eb;--shadow:0 8px 30px rgba(0,0,0,.18)}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#181b21;--text:#eceef2;--muted:#9aa1ad;--line:#2a2f38;--accent:#4f8cff;--accent-text:#0b1220;
+--free:#12301d;--free-text:#86efac;--busy:#16284d;--busy-text:#bcd3ff;--ok:#4ade80;--bad:#f87171;--mola:#262b33;--shadow:0 8px 30px rgba(0,0,0,.6)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+.hidden{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.center{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;gap:14px}
+.center h1{margin:0;font-size:28px}
+.center p{margin:0;max-width:340px;color:var(--muted)}
+.small{font-size:13px}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+header h1{margin:0;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon{border:0;background:transparent;font-size:20px;padding:6px 10px;border-radius:10px}
+main{padding:12px 14px calc(150px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:transparent;padding:9px 4px 8px;color:var(--muted);font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button b{font-size:20px;font-weight:400}
+nav button.on{color:var(--accent);font-weight:600}
+#fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:7;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-text);font-size:32px;line-height:1;box-shadow:var(--shadow)}
+.navrow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.navrow .mid{flex:1;text-align:center;font-weight:600;text-transform:capitalize;position:relative}
+.navrow .mid input{position:absolute;inset:0;opacity:0;width:100%;height:100%}
+.navrow .arrow{border:1px solid var(--line);background:var(--card);border-radius:12px;width:44px;height:44px;font-size:22px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px}
+.chip.accent{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.banner{background:var(--mola);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;color:var(--muted)}
+.slot{display:flex;gap:10px;margin-bottom:6px}
+.slot .t{width:44px;flex:none;font-size:13px;color:var(--muted);padding-top:18px;font-variant-numeric:tabular-nums}
+.cells{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.free{height:56px;border:0;border-radius:12px;background:var(--free);color:var(--free-text);text-align:left;padding:0 14px;font-weight:500}
+.mola{height:56px;border-radius:12px;background:var(--mola);color:var(--muted);display:flex;align-items:center;padding:0 14px;font-size:14px}
+.card{border:0;border-left:5px solid var(--accent);border-radius:12px;background:var(--busy);color:var(--busy-text);text-align:left;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:2px;width:100%}
+.card b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card span{font-size:13px;opacity:.85}
+.card.geldi{border-left-color:var(--ok)}
+.card.gelmedi{border-left-color:var(--bad);opacity:.8}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;width:100%;text-align:left}
+.item:last-child{border-bottom:0}
+.item .grow{flex:1;min-width:0}
+.item .grow b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.muted{color:var(--muted);font-size:14px}
+.bar{height:8px;border-radius:99px;background:var(--mola);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.badge{font-size:12px;border-radius:99px;padding:2px 9px;background:var(--mola);color:var(--muted);white-space:nowrap}
+.badge.geldi{background:var(--free);color:var(--free-text)}
+.badge.gelmedi,.badge.iptal{background:#fee2e2;color:#991b1b}
+@media (prefers-color-scheme:dark){.badge.gelmedi,.badge.iptal{background:#3b1717;color:#fca5a5}}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 12px;font-size:16px;margin-top:4px}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 14px;text-decoration:none;color:var(--text);font-size:15px}
+.btn.primary,button.primary{background:var(--accent);color:var(--accent-text);border:0;border-radius:12px;padding:13px 18px;font-weight:600;font-size:16px;width:100%}
+.btn.block{width:100%}
+button:disabled{opacity:.55}
+.seg{display:flex;gap:8px;margin:4px 0 12px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px 6px;font-size:15px}
+.seg button.on{background:var(--accent);color:var(--accent-text);border-color:var(--accent);font-weight:600}
+.stack{display:flex;flex-direction:column;gap:10px}
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:640px;max-height:92vh;overflow:auto;background:var(--bg);border-radius:20px 20px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.dialog{background:var(--card);border-radius:18px;padding:22px;margin:auto;max-width:320px;text-align:center;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow)}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mh h3{margin:0;font-size:20px}
+.x{border:0;background:var(--mola);border-radius:50%;width:34px;height:34px;font-size:16px}
+.info{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:14px}
+.sug{display:flex;flex-direction:column;gap:6px;margin:-4px 0 10px}
+.sug button{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 12px;text-align:left}
+.days{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.days label{margin:0;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 10px;font-size:14px;color:var(--text)}
+.days input{width:auto;margin:0}
+h2.sec{font-size:15px;margin:18px 0 8px;color:var(--muted);font-weight:600}
+#toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;border-radius:12px;padding:10px 16px;font-size:14px;z-index:40;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div id="loading" class="center"><p>Yükleniyor…</p></div>
+
+<div id="login" class="center hidden">
+  <h1>Randevu Defteri</h1>
+  <p>Randevularını, boş saatlerini ve müşteri geçmişini kendi Google Drive'ında tut.</p>
+  <button class="primary" id="loginBtn" style="max-width:320px">Google ile giriş yap</button>
+  <p class="small">Veriler yalnızca senin Google Drive'ındaki "Randevu Defteri" tablosunda saklanır. Uygulama sadece kendi oluşturduğu dosyaya erişir.</p>
+</div>
+
+<div id="errscreen" class="center hidden">
+  <p id="errtext"></p>
+  <button class="primary" id="retryBtn" style="max-width:320px">Tekrar dene</button>
+  <button class="btn" id="logoutBtn2">Çıkış yap</button>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1 id="title">Randevu Defteri</h1>
+    <button class="icon" data-act="refresh" aria-label="Yenile">↻</button>
+  </header>
+  <main id="main"></main>
+  <button id="fab" data-act="new" aria-label="Yeni randevu">+</button>
+  <nav>
+    <button data-act="tab" data-v="gun"><b>📅</b>Gün</button>
+    <button data-act="tab" data-v="hafta"><b>🗓️</b>Hafta</button>
+    <button data-act="tab" data-v="musteri"><b>👥</b>Müşteriler</button>
+    <button data-act="tab" data-v="ayar"><b>⚙️</b>Ayarlar</button>
+  </nav>
+</div>
+
+<div id="renew" class="overlay hidden" style="align-items:center">
+  <div class="dialog">
+    <b>Oturum süresi doldu</b>
+    <span class="muted">Devam etmek için oturumu yenile.</span>
+    <button class="primary" id="renewBtn">Oturumu yenile</button>
+  </div>
+</div>
+
+<div id="modal" class="overlay hidden"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+'use strict';
+/* ---------- Sabitler ---------- */
+const CLIENT_ID = '885525975490-kcfpf10anouop0rs2688umjhmlniuav9.apps.googleusercontent.com';
+const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const BOOK_TITLE = 'Randevu Defteri';
+const SH = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DEFAULTS = { isletmeAdi:'', mesaiBas:'09:00', mesaiBit:'22:00', tatil:'', ogleBas:'', ogleBit:'', hizmetler:'Saç|Sakal|Saç+Sakal|Fön' };
+const SKEYS = Object.keys(DEFAULTS);
+const HEAD = {
+  Musteriler:['id','ad','telefon','not','olusturma'],
+  Randevular:['id','musteriId','tarih','saat','sure','hizmet','not','durum','olusturma'],
+  Ayarlar:['ayar','deger']
+};
+const DURUM = { bekliyor:'Bekliyor', geldi:'Geldi', gelmedi:'Gelmedi', iptal:'İptal' };
+const GUN = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const GUN_KISA = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+
+/* ---------- Yardımcılar ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const dstr = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+const pd = s => { const p = s.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); };
+const tmin = s => { const p = s.split(':').map(Number); return p[0]*60 + p[1]; };
+const mt = m => pad(Math.floor(m/60)) + ':' + pad(m%60);
+const digits = s => String(s || '').replace(/\D/g,'');
+const samePhone = (a,b) => { a = digits(a).slice(-10); b = digits(b).slice(-10); return a.length >= 7 && a === b; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const fmtLong = d => d.toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+const fmtShort = s => pd(s).toLocaleDateString('tr-TR', { day:'numeric', month:'short', year:'numeric' });
+const sureLabel = n => n === 60 ? '1 saat' : n + ' dk';
+const addDays = (d,n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+let toastTimer;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600); }
+function err(e){ console.error(e); toast('Hata: ' + String((e && e.message) || e).slice(0,140)); }
+function show(sel, on){ $(sel).classList.toggle('hidden', !on); }
+
+/* ---------- Durum ---------- */
+const S = { book:null, set:Object.assign({}, DEFAULTS), musteriler:[], randevular:[], view:'gun', date:new Date(), loaded:0 };
+S.date.setHours(0,0,0,0);
+let F = null; // açık randevu formu durumu
+
+function cfg(){
+  const st = S.set;
+  const ogle = st.ogleBas && st.ogleBit ? [tmin(st.ogleBas), tmin(st.ogleBit)] : null;
+  return {
+    bas: tmin(st.mesaiBas), bit: tmin(st.mesaiBit),
+    tatil: new Set(String(st.tatil).split(',').filter(x => x !== '').map(Number)),
+    ogle: ogle && ogle[1] > ogle[0] ? ogle : null,
+    hiz: String(st.hizmetler).split('|').map(x => x.trim()).filter(Boolean)
+  };
+}
+const mus = id => S.musteriler.find(m => m.id === id);
+const musAd = a => { const m = mus(a.musteriId); return m ? m.ad : '(silinmiş müşteri)'; };
+const dayAppts = ds => S.randevular.filter(a => a.tarih === ds && a.durum !== 'iptal');
+function conflicts(ds, start, sure, exceptId){
+  return dayAppts(ds).filter(a => a.id !== exceptId && tmin(a.saat) < start + sure && start < tmin(a.saat) + a.sure);
+}
+function stats(mid){
+  const mine = S.randevular.filter(a => a.musteriId === mid);
+  const geldi = mine.filter(a => a.durum === 'geldi').sort((a,b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
+  return { n: geldi.length, son: geldi[0] ? geldi[0].tarih : null, gelmedi: mine.filter(a => a.durum === 'gelmedi').length };
+}
+function statText(mid){
+  const s = stats(mid);
+  if (!s.n) return 'Henüz "geldi" kaydı yok' + (s.gelmedi ? ' · ' + s.gelmedi + ' kez gelmedi' : '');
+  return 'Son geliş: ' + fmtShort(s.son) + ' · Toplam ziyaret: ' + s.n + (s.gelmedi ? ' · ' + s.gelmedi + ' kez gelmedi' : '');
+}
+
+/* ---------- Google kimlik doğrulama ---------- */
+let tokenClient = null, tok = null, waiters = [], booted = false;
+function loadTok(){ try { const t = JSON.parse(localStorage.getItem('rd_tok')); if (t && t.exp > Date.now() + 60000) return t; } catch(e){} return null; }
+function gisReady(){ return new Promise(res => { const iv = setInterval(() => { if (window.google && google.accounts && google.accounts.oauth2){ clearInterval(iv); res(); } }, 100); }); }
+function onTok(r){
+  if (!r || r.error){ toast('Giriş başarısız: ' + (r && r.error || 'bilinmeyen hata')); return; }
+  tok = { t:r.access_token, exp: Date.now() + (Number(r.expires_in || 3600) - 60) * 1000 };
+  localStorage.setItem('rd_tok', JSON.stringify(tok));
+  show('#renew', false);
+  const w = waiters; waiters = []; w.forEach(f => f());
+  if (!booted) boot();
+}
+async function initAuth(){
+  await gisReady();
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPE, callback: onTok,
+    error_callback: e => toast('Giriş penceresi kapandı' + (e && e.type ? ' (' + e.type + ')' : ''))
+  });
+}
+function ensureToken(){
+  if (tok && tok.exp > Date.now()) return Promise.resolve();
+  show('#renew', true);
+  return new Promise(res => waiters.push(res));
+}
+async function gfetch(url, opt){
+  opt = opt || {};
+  await ensureToken();
+  const r = await fetch(url, Object.assign({}, opt, { headers: Object.assign({ Authorization:'Bearer ' + tok.t, 'Content-Type':'application/json' }, opt.headers || {}) }));
+  if (r.status === 401){ tok = null; localStorage.removeItem('rd_tok'); return gfetch(url, opt); }
+  if (!r.ok){ const m = await r.text(); const e = new Error(r.status + ' ' + m.slice(0,200)); e.status = r.status; throw e; }
+  return r.status === 204 ? null : r.json();
+}
+
+/* ---------- Google Sheets ---------- */
+const cell = v => ({ userEnteredValue: { stringValue: String(v) } });
+const rowData = vals => ({ values: vals.map(cell) });
+async function createBook(){
+  const mk = (title, rows) => ({ properties:{ title }, data:[{ startRow:0, startColumn:0, rowData: rows.map(rowData) }] });
+  const body = {
+    properties:{ title: BOOK_TITLE, locale:'tr_TR', timeZone:'Europe/Istanbul' },
+    sheets:[
+      mk('Musteriler', [HEAD.Musteriler]),
+      mk('Randevular', [HEAD.Randevular]),
+      mk('Ayarlar', [HEAD.Ayarlar].concat(SKEYS.map(k => [k, DEFAULTS[k]])))
+    ]
+  };
+  const r = await gfetch(SH, { method:'POST', body: JSON.stringify(body) });
+  return r.spreadsheetId;
+}
+async function findOrCreateBook(){
+  const cached = localStorage.getItem('rd_book');
+  if (cached){
+    try { await gfetch(SH + '/' + cached + '?fields=spreadsheetId'); return cached; }
+    catch(e){ if (e.status !== 404 && e.status !== 403) throw e; localStorage.removeItem('rd_book'); }
+  }
+  const q = encodeURIComponent("name='" + BOOK_TITLE + "' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false");
+  const r = await gfetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)&orderBy=createdTime');
+  const id = r.files && r.files.length ? r.files[0].id : await createBook();
+  localStorage.setItem('rd_book', id);
+  return id;
+}
+async function loadAll(){
+  const r = await gfetch(SH + '/' + S.book + '/values:batchGet?ranges=Musteriler!A2:E&ranges=Randevular!A2:I&ranges=Ayarlar!A2:B');
+  const vr = r.valueRanges.map(v => v.values || []);
+  S.musteriler = vr[0].map((v,i) => ({ row:i+2, id:v[0]||'', ad:v[1]||'', tel:v[2]||'', not:v[3]||'', ts:v[4]||'' })).filter(x => x.id);
+  S.randevular = vr[1].map((v,i) => ({ row:i+2, id:v[0]||'', musteriId:v[1]||'', tarih:v[2]||'', saat:v[3]||'', sure:Number(v[4])||30, hizmet:v[5]||'', not:v[6]||'', durum:v[7]||'bekliyor', ts:v[8]||'' })).filter(x => x.id && x.tarih && x.saat);
+  const set = Object.assign({}, DEFAULTS);
+  vr[2].forEach(v => { if (v[0] && SKEYS.indexOf(v[0]) >= 0 && v[1] !== undefined && v[1] !== '') set[v[0]] = v[1]; });
+  S.set = set;
+  S.loaded = Date.now();
+}
+async function appendRow(sheet, vals){
+  const r = await gfetch(SH + '/' + S.book + '/values/' + sheet + '!A:A:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS', { method:'POST', body: JSON.stringify({ values:[vals] }) });
+  const m = /!A(\d+)/.exec(r.updates.updatedRange);
+  return Number(m[1]);
+}
+async function putRow(sheet, row, vals, lastCol){
+  await gfetch(SH + '/' + S.book + '/values/' + sheet + '!A' + row + ':' + lastCol + row + '?valueInputOption=RAW', { method:'PUT', body: JSON.stringify({ values:[vals] }) });
+}
+const mRow = m => [m.id, m.ad, m.tel, m.not, m.ts];
+const aRow = a => [a.id, a.musteriId, a.tarih, a.saat, a.sure, a.hizmet, a.not, a.durum, a.ts];
+async function saveSettings(){
+  await gfetch(SH + '/' + S.book + '/values/Ayarlar!A2:B' + (1 + SKEYS.length) + '?valueInputOption=RAW', { method:'PUT', body: JSON.stringify({ values: SKEYS.map(k => [k, S.set[k]]) }) });
+}
+
+/* ---------- Açılış ---------- */
+async function boot(){
+  booted = true;
+  show('#login', false); show('#errscreen', false); show('#loading', true);
+  try {
+    S.book = await findOrCreateBook();
+    await loadAll();
+    show('#loading', false); show('#app', true);
+    render();
+  } catch(e){
+    console.error(e);
+    booted = false;
+    show('#loading', false); show('#app', false); show('#errscreen', true);
+    $('#errtext').textContent = 'Veriler yüklenemedi: ' + String(e.message || e).slice(0,200);
+  }
+}
+async function refresh(silent){
+  try { await loadAll(); render(); if (!silent) toast('Güncellendi'); } catch(e){ if (!silent) err(e); }
+}
+function logout(){ localStorage.removeItem('rd_tok'); localStorage.removeItem('rd_book'); location.reload(); }
+
+/* ---------- Görünümler ---------- */
+function render(){
+  const name = S.set.isletmeAdi || 'Randevu Defteri';
+  $('#title').textContent = name; document.title = name;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
+  $('#fab').classList.toggle('hidden', S.view === 'ayar');
+  const v = { gun:viewGun, hafta:viewHafta, musteri:viewMusteri, ayar:viewAyar }[S.view];
+  $('#main').innerHTML = v();
+  if (S.view === 'musteri') renderMList();
+}
+
+function weekStart(d){ return addDays(d, -((d.getDay() + 6) % 7)); }
+function slotCount(c){
+  const mola = c.ogle ? Math.max(0, Math.min(c.ogle[1], c.bit) - Math.max(c.ogle[0], c.bas)) : 0;
+  return Math.max(0, Math.floor((c.bit - c.bas - mola) / 30));
+}
+
+function viewGun(){
+  const ds = dstr(S.date), c = cfg(), list = dayAppts(ds);
+  let lo = c.bas, hi = c.bit;
+  list.forEach(a => { const s = tmin(a.saat); lo = Math.min(lo, s); hi = Math.max(hi, s + a.sure); });
+  lo = Math.floor(lo/30)*30; hi = Math.ceil(hi/30)*30;
+  const booked = list.reduce((s,a) => s + a.sure/30, 0), free = Math.max(0, slotCount(c) - booked);
+  const tatil = c.tatil.has(S.date.getDay());
+  const isToday = ds === dstr(new Date());
+  let h = '<div class="navrow"><button class="arrow" data-act="prev">‹</button><div class="mid">' + esc(fmtLong(S.date)) +
+    '<input type="date" value="' + ds + '" data-change="pickdate"></div><button class="arrow" data-act="next">›</button></div>';
+  h += '<div class="chips">' + (isToday ? '' : '<button class="chip" data-act="today">Bugün</button>') +
+    '<button class="chip accent" data-act="nextfree">En yakın boş saat</button>' +
+    '<span class="chip" style="border-style:dashed">' + list.length + ' randevu · ' + free + ' boş</span></div>';
+  if (tatil) h += '<div class="banner">Bu gün tatil günü olarak işaretli. Yine de randevu ekleyebilirsin.</div>';
+  for (let m = lo; m < hi; m += 30){
+    const starting = list.filter(a => tmin(a.saat) === m).sort((a,b) => b.sure - a.sure);
+    const covered = list.some(a => { const s = tmin(a.saat); return s < m && m < s + a.sure; });
+    if (starting.length){
+      h += '<div class="slot"><div class="t">' + mt(m) + '</div><div class="cells">' + starting.map(a => {
+        const n = a.sure / 30, ht = n * 56 + (n - 1) * 6;
+        return '<button class="card ' + a.durum + '" style="min-height:' + ht + 'px" data-act="appt" data-id="' + a.id + '"><b>' + esc(musAd(a)) + '</b><span>' +
+          mt(m) + '–' + mt(m + a.sure) + ' · ' + sureLabel(a.sure) + (a.hizmet ? ' · ' + esc(a.hizmet) : '') + (a.durum !== 'bekliyor' ? ' · ' + DURUM[a.durum] : '') + '</span></button>';
+      }).join('') + '</div></div>';
+    } else if (covered){
+      continue;
+    } else if (c.ogle && m >= c.ogle[0] && m < c.ogle[1]){
+      h += '<div class="slot"><div class="t">' + mt(m) + '</div><div class="cells"><div class="mola">Öğle arası</div></div></div>';
+    } else {
+      h += '<div class="slot"><div class="t">' + mt(m) + '</div><div class="cells"><button class="free" data-act="new" data-t="' + mt(m) + '">Boş</button></div></div>';
+    }
+  }
+  const iptal = S.randevular.filter(a => a.tarih === ds && a.durum === 'iptal');
+  if (iptal.length){
+    h += '<h2 class="sec">İptal edilenler</h2><div class="list">' + iptal.map(a =>
+      '<button class="item" data-act="appt" data-id="' + a.id + '"><div class="grow"><b>' + esc(musAd(a)) + '</b><span class="muted">' + esc(a.saat) + ' · ' + sureLabel(a.sure) + '</span></div><span class="badge iptal">İptal</span></button>').join('') + '</div>';
+  }
+  return h;
+}
+
+function viewHafta(){
+  const c = cfg(), mon = weekStart(S.date), total = slotCount(c), today = dstr(new Date());
+  const sun = addDays(mon, 6);
+  const rng = mon.toLocaleDateString('tr-TR', { day:'numeric', month:'short' }) + ' – ' + sun.toLocaleDateString('tr-TR', { day:'numeric', month:'short', year:'numeric' });
+  let h = '<div class="navrow"><button class="arrow" data-act="prev">‹</button><div class="mid">' + esc(rng) + '</div><button class="arrow" data-act="next">›</button></div>';
+  h += '<div class="chips"><button class="chip" data-act="today">Bu hafta</button><button class="chip accent" data-act="nextfree">En yakın boş saat</button></div><div class="list">';
+  for (let i = 0; i < 7; i++){
+    const d = addDays(mon, i), ds = dstr(d), list = dayAppts(ds), tat = c.tatil.has(d.getDay());
+    const booked = list.reduce((s,a) => s + a.sure/30, 0), free = Math.max(0, total - booked);
+    const pct = total ? Math.min(100, Math.round(booked / total * 100)) : 0;
+    h += '<button class="item" data-act="goday" data-d="' + ds + '"><div style="width:62px"><b style="' + (ds === today ? 'color:var(--accent)' : '') + '">' + GUN_KISA[d.getDay()] + ' ' + d.getDate() + '</b></div><div class="grow">' +
+      (tat ? '<span class="muted">Tatil' + (list.length ? ' · ' + list.length + ' randevu' : '') + '</span>' :
+        '<span class="muted">' + list.length + ' randevu · ' + free + ' boş slot</span><div class="bar"><i style="width:' + pct + '%"></i></div>') +
+      '</div><span class="muted">›</span></button>';
+  }
+  return h + '</div>';
+}
+
+function viewMusteri(){
+  return '<input id="msearch" type="search" placeholder="Ad veya telefon ara…" data-input="msearch" autocomplete="off" style="margin:0 0 12px"><div id="mlist"></div>';
+}
+function renderMList(){
+  const q = (($('#msearch') || {}).value || '').trim().toLowerCase(), qd = digits(q);
+  let list = S.musteriler.map(m => ({ m, s: stats(m.id) })).filter(x => !q || x.m.ad.toLowerCase().includes(q) || (qd.length >= 3 && digits(x.m.tel).includes(qd)));
+  list.sort((a,b) => (b.s.son || '').localeCompare(a.s.son || '') || a.m.ad.localeCompare(b.m.ad, 'tr'));
+  $('#mlist').innerHTML = list.length ? '<div class="list">' + list.map(x =>
+    '<button class="item" data-act="cust" data-id="' + x.m.id + '"><div class="grow"><b>' + esc(x.m.ad) + '</b><span class="muted">' + esc(x.m.tel || 'Telefon yok') + ' · ' +
+    (x.s.son ? 'Son: ' + fmtShort(x.s.son) : 'Henüz gelmedi') + (x.s.n ? ' · ' + x.s.n + ' ziyaret' : '') + '</span></div><span class="muted">›</span></button>').join('') + '</div>'
+    : '<div class="banner">' + (S.musteriler.length ? 'Eşleşen müşteri yok.' : 'Henüz müşteri yok. İlk randevuyu ekleyince müşteri otomatik kaydedilir.') + '</div>';
+}
+
+function timeOpts(sel, from, to, extra){
+  const set = new Set(); for (let m = from; m <= to; m += 30) set.add(m);
+  if (extra != null) set.add(extra);
+  return Array.from(set).sort((a,b) => a - b).map(m => '<option value="' + mt(m) + '"' + (m === sel ? ' selected' : '') + '>' + mt(m) + '</option>').join('');
+}
+function viewAyar(){
+  const st = S.set, c = cfg();
+  const opts = (sel, withNone) => (withNone ? '<option value="">Yok</option>' : '') + Array.from({ length: 48 }, (_, i) => i * 30).map(m => '<option value="' + mt(m) + '"' + (mt(m) === sel ? ' selected' : '') + '>' + mt(m) + '</option>').join('');
+  return '<div class="stack"><label>İşletme adı (üst başlıkta görünür)<input id="s_ad" value="' + esc(st.isletmeAdi) + '" placeholder="Örn. Ahmet Berber"></label>' +
+    '<div class="row2"><label>Mesai başlangıç<select id="s_bas">' + opts(st.mesaiBas) + '</select></label><label>Mesai bitiş<select id="s_bit">' + opts(st.mesaiBit) + '</select></label></div>' +
+    '<div><div class="muted">Haftalık tatil günleri</div><div class="days">' + [1,2,3,4,5,6,0].map(d => '<label><input type="checkbox" class="s_tatil" value="' + d + '"' + (c.tatil.has(d) ? ' checked' : '') + '>' + GUN[d] + '</label>').join('') + '</div></div>' +
+    '<div class="row2"><label>Öğle arası başlangıç<select id="s_ob">' + opts(st.ogleBas, true) + '</select></label><label>Öğle arası bitiş<select id="s_oe">' + opts(st.ogleBit, true) + '</select></label></div>' +
+    '<label>Hizmetler (her satıra bir tane)<textarea id="s_hiz" style="min-height:110px">' + esc(c.hiz.join('\n')) + '</textarea></label>' +
+    '<button class="primary" data-act="saveset">Ayarları kaydet</button>' +
+    '<a class="btn block" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/' + esc(S.book) + '">Veri tablosunu Google Sheets\'te aç</a>' +
+    '<button class="btn block" data-act="logout">Çıkış yap</button>' +
+    '<p class="muted" style="text-align:center">Randevu Defteri · Veriler senin Google Drive\'ında</p></div>';
+}
+
+/* ---------- Modal ---------- */
+function openModal(html){ $('#sheet').innerHTML = html; show('#modal', true); $('#sheet').scrollTop = 0; }
+function closeModal(){ show('#modal', false); $('#sheet').innerHTML = ''; F = null; }
+
+function openDetail(id){
+  const a = S.randevular.find(x => x.id === id); if (!a) return;
+  const m = mus(a.musteriId), end = mt(tmin(a.saat) + a.sure);
+  openModal('<div class="mh"><h3>' + esc(musAd(a)) + '</h3><button class="x" data-act="close">✕</button></div>' +
+    '<p class="muted" style="margin:0 0 10px">' + esc(fmtLong(pd(a.tarih))) + ' · ' + esc(a.saat) + '–' + end + ' (' + sureLabel(a.sure) + ')</p>' +
+    '<div class="info">' + (a.hizmet ? 'Hizmet: <b>' + esc(a.hizmet) + '</b><br>' : '') + (a.not ? 'Not: ' + esc(a.not) + '<br>' : '') +
+    (m && m.tel ? 'Telefon: ' + esc(m.tel) + '<br>' : '') + (m ? esc(statText(m.id)) : '') + (m && m.not ? '<br>Müşteri notu: ' + esc(m.not) : '') + '</div>' +
+    '<div class="seg">' + ['bekliyor','geldi','gelmedi','iptal'].map(d => '<button data-act="durum" data-id="' + a.id + '" data-d="' + d + '" class="' + (a.durum === d ? 'on' : '') + '">' + DURUM[d] + '</button>').join('') + '</div>' +
+    '<div class="stack">' +
+    '<a class="btn block" target="_blank" rel="noopener" href="' + esc(gcalUrl(a)) + '">📅 Google Takvim\'e ekle</a>' +
+    '<button class="btn block" data-act="ics" data-id="' + a.id + '">⬇️ .ics indir (iPhone Takvim)</button>' +
+    (m && m.tel ? '<a class="btn block" href="tel:' + digits(m.tel) + '">📞 Ara</a>' : '') +
+    '<button class="btn block" data-act="edit" data-id="' + a.id + '">✏️ Düzenle</button></div>');
+}
+
+function nowSlot(ds, c){
+  const t = new Date();
+  if (ds === dstr(t)){ const nm = Math.ceil((t.getHours()*60 + t.getMinutes()) / 30) * 30; if (nm >= c.bas && nm < c.bit) return nm; }
+  return c.bas;
+}
+function openForm(o){
+  o = o || {};
+  const ed = o.id ? S.randevular.find(a => a.id === o.id) : null, c = cfg();
+  const date = ed ? ed.tarih : (o.date || dstr(S.date));
+  const time = ed ? tmin(ed.saat) : (o.time != null ? tmin(o.time) : nowSlot(date, c));
+  F = { id: ed ? ed.id : null, mid: ed ? ed.musteriId : (o.mid || null), sure: ed ? ed.sure : 30 };
+  const m = F.mid ? mus(F.mid) : null;
+  openModal('<div class="mh"><h3>' + (ed ? 'Randevuyu düzenle' : 'Yeni randevu') + '</h3><button class="x" data-act="close">✕</button></div>' +
+    '<label>Ad soyad<input id="f_ad" data-input="fcust" autocomplete="off" value="' + esc(m ? m.ad : '') + '"></label><div id="sug" class="sug"></div>' +
+    '<label>Telefon<input id="f_tel" data-input="fcust" inputmode="tel" autocomplete="off" value="' + esc(m ? m.tel : '') + '" placeholder="05xx xxx xx xx"></label>' +
+    '<div id="mcard">' + (m ? mcardHtml(m) : '') + '</div>' +
+    '<div class="row2"><label>Tarih<input id="f_tarih" type="date" value="' + date + '"></label><label>Saat<select id="f_saat">' + timeOpts(time, c.bas, c.bit - 30, time) + '</select></label></div>' +
+    '<div class="muted" style="margin-bottom:2px;font-size:13px">Süre</div><div class="seg" id="f_sure"><button type="button" data-act="sure" data-v="30">30 dk</button><button type="button" data-act="sure" data-v="60">1 saat</button></div>' +
+    '<label>Hizmet (isteğe bağlı)<select id="f_hiz"><option value="">—</option>' + c.hiz.concat(ed && ed.hizmet && c.hiz.indexOf(ed.hizmet) < 0 ? [ed.hizmet] : []).map(h => '<option' + (ed && ed.hizmet === h ? ' selected' : '') + '>' + esc(h) + '</option>').join('') + '</select></label>' +
+    '<label>Not<textarea id="f_not">' + esc(ed ? ed.not : '') + '</textarea></label>' +
+    '<button class="primary" data-act="save">Kaydet</button>');
+  setSure(F.sure);
+}
+function setSure(v){ F.sure = v; document.querySelectorAll('#f_sure button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === v)); }
+function mcardHtml(m){ return '<div class="info"><b>Kayıtlı müşteri</b><br>' + esc(statText(m.id)) + (m.not ? '<br>Not: ' + esc(m.not) : '') + '</div>'; }
+function onFormCust(){
+  const ad = $('#f_ad').value.trim().toLowerCase(), tel = $('#f_tel').value, td = digits(tel);
+  const cur = F.mid ? mus(F.mid) : null;
+  if (cur && (cur.ad.toLowerCase() !== ad || digits(cur.tel) !== td)){ F.mid = null; $('#mcard').innerHTML = ''; }
+  if (!F.mid && td.length >= 10){
+    const hit = S.musteriler.find(m => samePhone(m.tel, tel));
+    if (hit){ F.mid = hit.id; if (!$('#f_ad').value.trim()) $('#f_ad').value = hit.ad; $('#mcard').innerHTML = mcardHtml(hit); $('#sug').innerHTML = ''; return; }
+  }
+  const matches = F.mid ? [] : S.musteriler.filter(m => (ad.length >= 2 && m.ad.toLowerCase().includes(ad)) || (td.length >= 3 && digits(m.tel).includes(td))).slice(0, 5);
+  $('#sug').innerHTML = matches.map(m => '<button type="button" data-act="pickm" data-id="' + m.id + '"><b>' + esc(m.ad) + '</b> <span class="muted">' + esc(m.tel) + '</span></button>').join('');
+}
+
+async function saveForm(btn){
+  const ad = $('#f_ad').value.trim(), tel = $('#f_tel').value.trim();
+  if (!ad){ toast('Ad soyad gerekli'); return; }
+  const tarih = $('#f_tarih').value, saat = $('#f_saat').value, sure = F.sure;
+  if (!tarih || !saat){ toast('Tarih ve saat seç'); return; }
+  const c = cfg(), s = tmin(saat), warns = [];
+  if (c.tatil.has(pd(tarih).getDay())) warns.push('• Bu gün tatil günü olarak işaretli.');
+  if (s < c.bas || s + sure > c.bit) warns.push('• Randevu mesai saatleri dışında.');
+  if (c.ogle && s < c.ogle[1] && s + sure > c.ogle[0]) warns.push('• Öğle arasıyla çakışıyor.');
+  conflicts(tarih, s, sure, F.id).forEach(a => warns.push('• ' + a.saat + '–' + mt(tmin(a.saat) + a.sure) + ' ' + musAd(a) + ' ile çakışıyor.'));
+  if (warns.length && !confirm('Dikkat:\n' + warns.join('\n') + '\n\nYine de kaydedilsin mi?')) return;
+  const data = { tarih, saat, sure, hizmet: $('#f_hiz').value, not: $('#f_not').value.trim() };
+  btn.disabled = true;
+  try {
+    let m = F.mid ? mus(F.mid) : null;
+    if (!m && tel) m = S.musteriler.find(x => samePhone(x.tel, tel)) || null;
+    if (!m){
+      m = { id: uid(), ad, tel, not: '', ts: new Date().toISOString() };
+      m.row = await appendRow('Musteriler', mRow(m));
+      S.musteriler.push(m);
+    } else if (!m.tel && tel){
+      m.tel = tel; await putRow('Musteriler', m.row, mRow(m), 'E');
+    }
+    let a = F.id ? S.randevular.find(x => x.id === F.id) : null;
+    if (a){
+      Object.assign(a, data, { musteriId: m.id });
+      await putRow('Randevular', a.row, aRow(a), 'I');
+    } else {
+      a = Object.assign({ id: uid(), musteriId: m.id, durum: 'bekliyor', ts: new Date().toISOString() }, data);
+      a.row = await appendRow('Randevular', aRow(a));
+      S.randevular.push(a);
+    }
+    S.date = pd(tarih); S.view = 'gun';
+    render(); openDetail(a.id); F = null; toast('Kaydedildi');
+  } catch(e){ err(e); btn.disabled = false; }
+}
+
+function openCust(id){
+  const m = mus(id); if (!m) return;
+  const hist = S.randevular.filter(a => a.musteriId === id).sort((a,b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
+  openModal('<div class="mh"><h3>' + esc(m.ad) + '</h3><button class="x" data-act="close">✕</button></div>' +
+    '<div class="info">' + esc(statText(id)) + '</div>' +
+    '<label>Ad soyad<input id="c_ad" value="' + esc(m.ad) + '"></label><label>Telefon<input id="c_tel" inputmode="tel" value="' + esc(m.tel) + '"></label>' +
+    '<label>Müşteri notu<textarea id="c_not">' + esc(m.not) + '</textarea></label>' +
+    '<div class="stack"><button class="primary" data-act="savecust" data-id="' + id + '">Kaydet</button><button class="btn block" data-act="new" data-mid="' + id + '">+ Bu müşteriye randevu ekle</button></div>' +
+    '<h2 class="sec">Geçmiş (' + hist.length + ')</h2>' +
+    (hist.length ? '<div class="list">' + hist.map(a => '<button class="item" data-act="appt" data-id="' + a.id + '"><div class="grow"><b>' + esc(fmtShort(a.tarih)) + ' · ' + esc(a.saat) + '</b><span class="muted">' + sureLabel(a.sure) + (a.hizmet ? ' · ' + esc(a.hizmet) : '') + '</span></div><span class="badge ' + a.durum + '">' + DURUM[a.durum] + '</span></button>').join('') + '</div>' : '<div class="banner">Henüz randevu yok.</div>'));
+}
+
+/* ---------- Takvime ekle ---------- */
+function ymdhms(d){ return d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00'; }
+function evRange(a){ const p = a.tarih.split('-').map(Number), s = tmin(a.saat); return [new Date(p[0], p[1]-1, p[2], 0, s), new Date(p[0], p[1]-1, p[2], 0, s + a.sure)]; }
+function evTitle(a){ return 'Randevu: ' + musAd(a) + (a.hizmet ? ' (' + a.hizmet + ')' : ''); }
+function evDetails(a){ const m = mus(a.musteriId); return [m && m.tel ? 'Tel: ' + m.tel : '', a.not].filter(Boolean).join('\n'); }
+function gcalUrl(a){
+  const r = evRange(a);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(evTitle(a)) + '&dates=' + ymdhms(r[0]) + '/' + ymdhms(r[1]) +
+    '&details=' + encodeURIComponent(evDetails(a)) + '&ctz=Europe%2FIstanbul';
+}
+function downloadIcs(a){
+  const r = evRange(a), esc2 = t => String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/, '');
+  const txt = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Randevu Defteri//TR','BEGIN:VEVENT','UID:' + a.id + '@randevu-defteri','DTSTAMP:' + stamp,
+    'DTSTART:' + ymdhms(r[0]), 'DTEND:' + ymdhms(r[1]), 'SUMMARY:' + esc2(evTitle(a)), 'DESCRIPTION:' + esc2(evDetails(a)), 'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const url = URL.createObjectURL(new Blob([txt], { type:'text/calendar;charset=utf-8' }));
+  const l = document.createElement('a'); l.href = url; l.download = 'randevu.ics'; document.body.appendChild(l); l.click(); l.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* ---------- En yakın boş saat ---------- */
+function nextFree(sure){
+  const c = cfg(), now = new Date();
+  for (let i = 0; i < 90; i++){
+    const d = addDays(now, i);
+    if (c.tatil.has(d.getDay())) continue;
+    const ds = dstr(d); let start = c.bas;
+    if (i === 0) start = Math.max(start, Math.ceil((now.getHours()*60 + now.getMinutes()) / 30) * 30);
+    for (let m = start; m + sure <= c.bit; m += 30){
+      if (c.ogle && m < c.ogle[1] && m + sure > c.ogle[0]) continue;
+      if (!conflicts(ds, m, sure).length) return { ds, m };
+    }
+  }
+  return null;
+}
+function dayLabel(ds){
+  const t = dstr(new Date()); if (ds === t) return 'Bugün'; if (ds === dstr(addDays(new Date(), 1))) return 'Yarın';
+  return pd(ds).toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long' });
+}
+function openNextFree(){
+  const r = [30, 60].map(s => ({ s, f: nextFree(s) }));
+  openModal('<div class="mh"><h3>En yakın boş saat</h3><button class="x" data-act="close">✕</button></div><div class="stack">' + r.map(x => x.f ?
+    '<div class="info"><b>' + sureLabel(x.s) + ':</b> ' + esc(dayLabel(x.f.ds)) + ' ' + mt(x.f.m) + '<div class="row2" style="margin-top:8px"><button class="btn" data-act="goslot" data-d="' + x.f.ds + '">Güne git</button><button class="btn" data-act="new" data-d="' + x.f.ds + '" data-t="' + mt(x.f.m) + '" data-s="' + x.s + '">Randevu ekle</button></div></div>' :
+    '<div class="info"><b>' + sureLabel(x.s) + ':</b> Önümüzdeki 90 günde boş yer bulunamadı.</div>').join('') + '</div>');
+}
+
+/* ---------- Olaylar ---------- */
+async function setDurum(id, d){
+  const a = S.randevular.find(x => x.id === id); if (!a || a.durum === d) return;
+  const old = a.durum; a.durum = d;
+  try { await putRow('Randevular', a.row, aRow(a), 'I'); render(); openDetail(id); toast(DURUM[d]); }
+  catch(e){ a.durum = old; err(e); }
+}
+const ACTS = {
+  tab: el => { S.view = el.dataset.v; render(); window.scrollTo(0,0); },
+  prev: () => { S.date = addDays(S.date, S.view === 'hafta' ? -7 : -1); render(); },
+  next: () => { S.date = addDays(S.date, S.view === 'hafta' ? 7 : 1); render(); },
+  today: () => { const t = new Date(); S.date = new Date(t.getFullYear(), t.getMonth(), t.getDate()); render(); },
+  goday: el => { S.date = pd(el.dataset.d); S.view = 'gun'; render(); window.scrollTo(0,0); },
+  goslot: el => { S.date = pd(el.dataset.d); S.view = 'gun'; closeModal(); render(); window.scrollTo(0,0); },
+  refresh: () => refresh(false),
+  close: () => closeModal(),
+  new: el => {
+    const d = el.dataset;
+    closeModal();
+    openForm({ date: d.d || dstr(S.date), time: d.t, mid: d.mid });
+    if (d.s) setSure(Number(d.s));
+  },
+  appt: el => openDetail(el.dataset.id),
+  edit: el => openForm({ id: el.dataset.id }),
+  durum: el => setDurum(el.dataset.id, el.dataset.d),
+  ics: el => { const a = S.randevular.find(x => x.id === el.dataset.id); if (a) downloadIcs(a); },
+  sure: el => setSure(Number(el.dataset.v)),
+  pickm: el => {
+    const m = mus(el.dataset.id); if (!m) return;
+    F.mid = m.id; $('#f_ad').value = m.ad; $('#f_tel').value = m.tel; $('#mcard').innerHTML = mcardHtml(m); $('#sug').innerHTML = '';
+  },
+  save: el => saveForm(el),
+  cust: el => openCust(el.dataset.id),
+  savecust: async el => {
+    const m = mus(el.dataset.id), ad = $('#c_ad').value.trim(); if (!m) return;
+    if (!ad){ toast('Ad soyad gerekli'); return; }
+    const old = { ad:m.ad, tel:m.tel, not:m.not };
+    m.ad = ad; m.tel = $('#c_tel').value.trim(); m.not = $('#c_not').value.trim();
+    el.disabled = true;
+    try { await putRow('Musteriler', m.row, mRow(m), 'E'); render(); openCust(m.id); toast('Kaydedildi'); }
+    catch(e){ Object.assign(m, old); err(e); el.disabled = false; }
+  },
+  nextfree: () => openNextFree(),
+  saveset: async el => {
+    const bas = $('#s_bas').value, bit = $('#s_bit').value, ob = $('#s_ob').value, oe = $('#s_oe').value;
+    if (tmin(bit) <= tmin(bas)){ toast('Mesai bitişi başlangıçtan sonra olmalı'); return; }
+    if ((ob && !oe) || (!ob && oe) || (ob && tmin(oe) <= tmin(ob))){ toast('Öğle arası için başlangıç ve bitişi doğru seç'); return; }
+    const hiz = $('#s_hiz').value.split('\n').map(x => x.trim().replace(/\|/g,'')).filter(Boolean);
+    const old = S.set;
+    S.set = Object.assign({}, S.set, {
+      isletmeAdi: $('#s_ad').value.trim(), mesaiBas: bas, mesaiBit: bit, ogleBas: ob, ogleBit: oe,
+      tatil: Array.from(document.querySelectorAll('.s_tatil:checked')).map(x => x.value).join(','),
+      hizmetler: hiz.join('|') || DEFAULTS.hizmetler
+    });
+    el.disabled = true;
+    try { await saveSettings(); render(); toast('Ayarlar kaydedildi'); }
+    catch(e){ S.set = old; err(e); el.disabled = false; }
+  },
+  logout: () => { if (confirm('Çıkış yapılsın mı? Verilerin Drive\'ında güvende kalır.')) logout(); }
+};
+document.addEventListener('click', e => {
+  if (e.target.id === 'modal'){ closeModal(); return; }
+  const el = e.target.closest('[data-act]');
+  if (el && ACTS[el.dataset.act]) ACTS[el.dataset.act](el, e);
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.input;
+  if (k === 'fcust') onFormCust();
+  if (k === 'msearch') renderMList();
+});
+document.addEventListener('change', e => {
+  if (e.target.dataset && e.target.dataset.change === 'pickdate' && e.target.value){ S.date = pd(e.target.value); render(); }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && booted && tok && tok.exp > Date.now() && Date.now() - S.loaded > 120000 && $('#modal').classList.contains('hidden')) refresh(true);
+});
+$('#loginBtn').addEventListener('click', () => { if (tokenClient) tokenClient.requestAccessToken(); else toast('Google yükleniyor, birkaç saniye bekle'); });
+$('#renewBtn').addEventListener('click', () => { if (tokenClient) tokenClient.requestAccessToken({ prompt:'' }); });
+$('#retryBtn').addEventListener('click', () => { if (loadTok() || tok) boot(); else { show('#errscreen', false); show('#login', true); } });
+$('#logoutBtn2').addEventListener('click', logout);
+
+/* ---------- Simge ve başlangıç ---------- */
+(function icon(){ try {
+  const c = document.createElement('canvas'); c.width = c.height = 180; const x = c.getContext('2d');
+  if (!x) return;
+  x.fillStyle = '#2563eb'; x.fillRect(0,0,180,180);
+  x.fillStyle = '#fff'; x.fillRect(36,46,108,98);
+  x.fillStyle = '#93c5fd'; x.fillRect(36,46,108,26);
+  x.fillStyle = '#fff'; x.fillRect(58,34,10,24); x.fillRect(112,34,10,24);
+  x.fillStyle = '#2563eb';
+  for (let r = 0; r < 2; r++) for (let q = 0; q < 3; q++) x.fillRect(52 + q*32, 86 + r*26, 20, 16);
+  const url = c.toDataURL('image/png');
+  $('#touchicon').href = url; $('#favicon').href = url;
+} catch(e){} })();
+
+(async function start(){
+  await initAuth();
+  tok = loadTok();
+  if (tok) boot(); else { show('#loading', false); show('#login', true); }
+})();
+</script>
+</body>
+</html>
