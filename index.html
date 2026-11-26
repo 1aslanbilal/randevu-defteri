@@ -138,7 +138,6 @@ h2.sec{font-size:14px;margin:18px 0 8px;color:var(--muted);font-weight:600}
 <div id="modal" class="overlay hidden"><div class="sheet" id="sheet"></div></div>
 <div id="toast"></div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 'use strict';
 /* ---------- Sabitler ---------- */
@@ -210,29 +209,74 @@ function statText(mid){
   return 'Son geliş: ' + fmtShort(s.son) + ' · Toplam ziyaret: ' + s.n + (s.gelmedi ? ' · ' + s.gelmedi + ' kez gelmedi' : '');
 }
 
-/* ---------- Google kimlik doğrulama ---------- */
-let tokenClient = null, tok = null, waiters = [], booted = false;
+/* ---------- Google kimlik doğrulama (yönlendirme + sessiz yenileme) ---------- */
+const REDIRECT = location.origin + location.pathname;
+const SILENT_COOLDOWN = 10 * 60 * 1000;
+let tok = null, booted = false, navigating = false;
 function loadTok(){ try { const t = JSON.parse(localStorage.getItem('rd_tok')); if (t && t.exp > Date.now() + 60000) return t; } catch(e){} return null; }
-function gisReady(){ return new Promise(res => { const iv = setInterval(() => { if (window.google && google.accounts && google.accounts.oauth2){ clearInterval(iv); res(); } }, 100); }); }
-function onTok(r){
-  if (!r || r.error){ toast('Giriş başarısız: ' + (r && r.error || 'bilinmeyen hata')); return; }
-  tok = { t:r.access_token, exp: Date.now() + (Number(r.expires_in || 3600) - 60) * 1000 };
-  localStorage.setItem('rd_tok', JSON.stringify(tok));
-  show('#renew', false);
-  const w = waiters; waiters = []; w.forEach(f => f());
-  if (!booted) boot();
+const tokValid = () => !!(tok && tok.exp > Date.now() + 60000);
+function nav(url){ location.assign(url); }
+function goAuth(silent){
+  if (navigating) return;
+  if (silent && Date.now() - Number(localStorage.getItem('rd_sfail') || 0) < SILENT_COOLDOWN){ showLogin(); return; }
+  navigating = true;
+  const st = uid() + uid();
+  localStorage.setItem('rd_state', st);
+  if (silent) localStorage.setItem('rd_silent', '1'); else localStorage.removeItem('rd_silent');
+  const p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPE, include_granted_scopes: 'true', state: st });
+  if (silent) p.set('prompt', 'none');
+  const hint = localStorage.getItem('rd_hint'); if (hint) p.set('login_hint', hint);
+  if (silent){ show('#login', false); show('#errscreen', false); show('#app', false); show('#loading', true); }
+  nav('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
 }
-async function initAuth(){
-  await gisReady();
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPE, callback: onTok,
-    error_callback: e => toast('Giriş penceresi kapandı' + (e && e.type ? ' (' + e.type + ')' : ''))
-  });
+function readReturn(){
+  const h = location.hash.replace(/^#/, '');
+  if (!/(^|&)(access_token|error)=/.test(h)) return null;
+  const p = new URLSearchParams(h);
+  history.replaceState(null, '', location.pathname + location.search);
+  const expected = localStorage.getItem('rd_state'), wasSilent = localStorage.getItem('rd_silent') === '1';
+  localStorage.removeItem('rd_state'); localStorage.removeItem('rd_silent');
+  if (!expected || p.get('state') !== expected) return 'err';
+  if (p.get('access_token')){
+    tok = { t: p.get('access_token'), exp: Date.now() + (Number(p.get('expires_in') || 3600) - 60) * 1000 };
+    localStorage.setItem('rd_tok', JSON.stringify(tok));
+    localStorage.setItem('rd_was', '1');
+    localStorage.removeItem('rd_sfail');
+    return 'ok';
+  }
+  if (wasSilent) localStorage.setItem('rd_sfail', String(Date.now()));
+  return 'err';
 }
+function showLogin(){ show('#loading', false); show('#app', false); show('#errscreen', false); show('#login', true); }
 function ensureToken(){
-  if (tok && tok.exp > Date.now()) return Promise.resolve();
-  show('#renew', true);
-  return new Promise(res => waiters.push(res));
+  if (tokValid()) return Promise.resolve();
+  saveDraft();
+  goAuth(true);
+  return new Promise(() => {});
+}
+function saveDraft(){
+  if (!F || !$('#f_ad')) return;
+  const d = { id: F.id, mid: F.mid, sure: F.sure, ad: $('#f_ad').value, tel: $('#f_tel').value, tarih: $('#f_tarih').value, saat: $('#f_saat').value, hiz: $('#f_hiz').value, not: $('#f_not').value };
+  localStorage.setItem('rd_draft', JSON.stringify(d));
+}
+function restoreDraft(){
+  let d = null; try { d = JSON.parse(localStorage.getItem('rd_draft')); } catch(e){}
+  localStorage.removeItem('rd_draft');
+  if (!d) return;
+  openForm({ id: d.id || undefined, date: d.tarih, time: d.saat, mid: d.mid || undefined });
+  $('#f_ad').value = d.ad || ''; $('#f_tel').value = d.tel || '';
+  if (d.tarih) $('#f_tarih').value = d.tarih;
+  if (d.saat && $('#f_saat').querySelector('option[value="' + d.saat + '"]')) $('#f_saat').value = d.saat;
+  if (d.hiz && $('#f_hiz').querySelector('option[value="' + d.hiz + '"]')) $('#f_hiz').value = d.hiz;
+  $('#f_not').value = d.not || '';
+  setSure(Number(d.sure) || 30);
+  toast('Oturum yenilendi. Kaydetmek için tekrar "Kaydet"e bas.');
+}
+function maybeSilentRenew(){
+  if (!booted || navigating || document.visibilityState !== 'visible') return false;
+  if (!$('#modal').classList.contains('hidden')) return false;
+  if (tok && tok.exp - Date.now() > 4 * 60000) return false;
+  goAuth(true); return true;
 }
 async function gfetch(url, opt){
   opt = opt || {};
@@ -242,6 +286,7 @@ async function gfetch(url, opt){
   if (!r.ok){ const m = await r.text(); const e = new Error(r.status + ' ' + m.slice(0,200)); e.status = r.status; throw e; }
   return r.status === 204 ? null : r.json();
 }
+setInterval(maybeSilentRenew, 60000);
 
 /* ---------- Google Sheets ---------- */
 const cell = v => ({ userEnteredValue: { stringValue: String(v) } });
@@ -304,6 +349,7 @@ async function boot(){
     await loadAll();
     show('#loading', false); show('#app', true);
     render();
+    restoreDraft();
   } catch(e){
     console.error(e);
     booted = false;
@@ -314,7 +360,7 @@ async function boot(){
 async function refresh(silent){
   try { await loadAll(); render(); if (!silent) toast('Güncellendi'); } catch(e){ if (!silent) err(e); }
 }
-function logout(){ localStorage.removeItem('rd_tok'); localStorage.removeItem('rd_book'); location.reload(); }
+function logout(){ ['rd_tok','rd_book','rd_was','rd_draft','rd_sfail','rd_state','rd_silent'].forEach(k => localStorage.removeItem(k)); location.reload(); }
 
 /* ---------- Görünümler ---------- */
 function render(){
@@ -485,6 +531,7 @@ async function saveForm(btn){
   if (!ad){ toast('Ad soyad gerekli'); return; }
   const tarih = $('#f_tarih').value, saat = $('#f_saat').value, sure = F.sure;
   if (!tarih || !saat){ toast('Tarih ve saat seç'); return; }
+  if (!tokValid()){ saveDraft(); goAuth(true); return; }
   const c = cfg(), s = tmin(saat), warns = [];
   if (c.tatil.has(pd(tarih).getDay())) warns.push('• Bu gün tatil günü olarak işaretli.');
   if (s < c.bas || s + sure > c.bit) warns.push('• Randevu mesai saatleri dışında.');
@@ -666,11 +713,12 @@ document.addEventListener('change', e => {
   if (e.target.dataset && e.target.dataset.change === 'pickdate' && e.target.value){ S.date = pd(e.target.value); render(); }
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && booted && tok && tok.exp > Date.now() && Date.now() - S.loaded > 120000 && $('#modal').classList.contains('hidden')) refresh(true);
+  if (maybeSilentRenew()) return;
+  if (document.visibilityState === 'visible' && booted && tokValid() && Date.now() - S.loaded > 120000 && $('#modal').classList.contains('hidden')) refresh(true);
 });
-$('#loginBtn').addEventListener('click', () => { if (tokenClient) tokenClient.requestAccessToken(); else toast('Google yükleniyor, birkaç saniye bekle'); });
-$('#renewBtn').addEventListener('click', () => { if (tokenClient) tokenClient.requestAccessToken({ prompt:'' }); });
-$('#retryBtn').addEventListener('click', () => { if (loadTok() || tok) boot(); else { show('#errscreen', false); show('#login', true); } });
+$('#loginBtn').addEventListener('click', () => goAuth(false));
+$('#renewBtn').addEventListener('click', () => goAuth(false));
+$('#retryBtn').addEventListener('click', () => { if (tokValid()) boot(); else goAuth(false); });
 $('#logoutBtn2').addEventListener('click', logout);
 
 /* ---------- Simge ve başlangıç ---------- */
@@ -687,10 +735,12 @@ $('#logoutBtn2').addEventListener('click', logout);
   $('#touchicon').href = url; $('#favicon').href = url;
 } catch(e){} })();
 
-(async function start(){
-  await initAuth();
-  tok = loadTok();
-  if (tok) boot(); else { show('#loading', false); show('#login', true); }
+(function start(){
+  const r = readReturn();
+  if (!tok) tok = loadTok();
+  if (tok){ boot(); return; }
+  if (r === 'err' || !localStorage.getItem('rd_was')){ showLogin(); return; }
+  goAuth(true);
 })();
 </script>
 </body>
