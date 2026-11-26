@@ -350,6 +350,7 @@ async function boot(){
     show('#loading', false); show('#app', true);
     render();
     restoreDraft();
+    if (!localStorage.getItem('rd_hint')) gfetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(r => { if (r && r.user && r.user.emailAddress) localStorage.setItem('rd_hint', r.user.emailAddress); }).catch(() => {});
   } catch(e){
     console.error(e);
     booted = false;
@@ -360,7 +361,7 @@ async function boot(){
 async function refresh(silent){
   try { await loadAll(); render(); if (!silent) toast('Güncellendi'); } catch(e){ if (!silent) err(e); }
 }
-function logout(){ ['rd_tok','rd_book','rd_was','rd_draft','rd_sfail','rd_state','rd_silent'].forEach(k => localStorage.removeItem(k)); location.reload(); }
+function logout(){ ['rd_tok','rd_book','rd_was','rd_draft','rd_sfail','rd_state','rd_silent','rd_hint'].forEach(k => localStorage.removeItem(k)); location.reload(); }
 
 /* ---------- Görünümler ---------- */
 function render(){
